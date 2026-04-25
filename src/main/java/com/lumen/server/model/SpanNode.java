@@ -1,9 +1,6 @@
 package com.lumen.server.model;
 
-import com.lumen.server.model.Span;
 import java.util.List;
-import lombok.Setter;
-import lombok.Getter;
 
 /*
     This class spanNode is not to store the spans
@@ -13,13 +10,29 @@ import lombok.Getter;
 */
 
 
-@Getter
-@Setter
 public class SpanNode {
     private Span span;
-    private List<Span> Childrens;
+    private List<SpanNode> Childrens;
     private Span parentSpan;
 
-    // Methods
+    // Getter and Setter
+    public Span getSpan() {
+        return span;
+    }
+    public void setSpan(Span span) {
+        this.span = span;
+    }
+    public List<SpanNode> getChildrens() {
+        return Childrens;
+    }
+    public void setChildrens(List<SpanNode> childrens) {
+        Childrens = childrens;
+    }
+    public Span getParentSpan() {
+        return parentSpan;
+    }
+    public void setParentSpan(Span parentSpan) {
+        this.parentSpan = parentSpan;
+    }
     
 }

@@ -2,9 +2,7 @@ package com.lumen.server.model;
 
 import java.util.HashMap;
 import java.util.List;
-import java.util.ArrayList;
 import java.util.Map;
-import java.util.PriorityQueue;
 
 
 public class Span{
@@ -111,8 +109,8 @@ public class Span{
             SpanNode parentNode = nodeMap.get(span.getParentSpanId());
             if(parentNode != null){
                 if(parentNode.getChildrens() != null){
-                    List<Span> childrens = parentNode.getChildrens();
-                    childrens.add(span);
+                    List<SpanNode> childrens = parentNode.getChildrens();
+                    childrens.add(node);
                     parentNode.setChildrens(childrens);
                 }
             }else{
