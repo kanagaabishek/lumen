@@ -1,5 +1,6 @@
-package com.lumen.server.model;
+package com.lumen.server.domain;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /*
@@ -12,8 +13,7 @@ import java.util.List;
 
 public class SpanNode {
     private Span span;
-    private List<SpanNode> Childrens;
-    private Span parentSpan;
+    private List<SpanNode> Childrens = new ArrayList<>();
 
     // Getter and Setter
     public Span getSpan() {
@@ -28,11 +28,8 @@ public class SpanNode {
     public void setChildrens(List<SpanNode> childrens) {
         Childrens = childrens;
     }
-    public Span getParentSpan() {
-        return parentSpan;
-    }
-    public void setParentSpan(Span parentSpan) {
-        this.parentSpan = parentSpan;
+    public String getParentSpan() {
+        return span.getParentSpanId();
     }
     
 }
