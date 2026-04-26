@@ -14,6 +14,7 @@ import java.util.List;
 public class SpanNode {
     private Span span;
     private List<SpanNode> Childrens = new ArrayList<>();
+    private long selfTimeMs;
 
     // Getter and Setter
     public Span getSpan() {
@@ -30,6 +31,12 @@ public class SpanNode {
     }
     public String getParentSpan() {
         return span.getParentSpanId();
+    }
+    public long getSelfTimeMs() {
+        return selfTimeMs;
+    }
+    public void setSelfTimeMs(long selfTimeMs) {
+        this.selfTimeMs = selfTimeMs;
     }
     
 }

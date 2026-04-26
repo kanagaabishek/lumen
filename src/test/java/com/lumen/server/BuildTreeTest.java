@@ -15,7 +15,7 @@ import com.lumen.server.domain.Span;
 import com.lumen.server.domain.SpanNode;
 
 @SpringBootTest
-public class SpanDataEntityTest {
+public class BuildTreeTest {
     @Test
     public void testBuildTreeWithSingleSpan() {
         // Test 1 — single span, no parent

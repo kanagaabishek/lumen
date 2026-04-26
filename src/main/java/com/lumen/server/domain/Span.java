@@ -1,16 +1,12 @@
 package com.lumen.server.domain;
 
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
 
 @AllArgsConstructor
 @NoArgsConstructor
-@RequiredArgsConstructor
 public class Span{
     private String spanId;
     private String traceId;
@@ -93,5 +89,9 @@ public class Span{
 
     public void setHasError(boolean hasError){
         this.hasError = hasError;
+    }
+
+    public long getDurationMs() {
+        return (endTimeNano - startTimeNano) / 1_000_000;
     }
 }
