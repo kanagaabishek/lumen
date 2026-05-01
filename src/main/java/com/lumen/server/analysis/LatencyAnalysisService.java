@@ -127,4 +127,23 @@ public class LatencyAnalysisService {
         return criticalPathSpanIdList;
 
     }
+
+    public SpanNode findBottleNeck(SpanNode root,List<String> criticalPathSpanIdList,Map<String,SpanNode> nodeMap){
+        /*
+         We need to walk through the criticalPathSpanIdList
+         with nodeMap to get the spanNode with the SpanId in the List
+         to find the highest selftime in the List
+         and return it as bottleNeck
+        */
+
+         SpanNode bottleNeckNode = null;
+         for(String criticalSpanId : criticalPathSpanIdList){
+            SpanNode currNode = nodeMap.get(criticalSpanId);
+            if(currNode != null && currNode.getSelfTimeMs()>bottleNeckNode.getSelfTimeMs()){
+                bottleNeckNode = currNode;
+            }
+         }
+
+         return bottleNeckNode;
+    }
 }
