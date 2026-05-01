@@ -2,6 +2,7 @@ package com.lumen.server.analysis;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.stereotype.Service;
 
@@ -74,4 +75,56 @@ public class LatencyAnalysisService {
         node.setSelfTimeMs(Math.max(0, selfTime));
     }
     
+    public long computeCriticalTime(SpanNode node, Map<String,Long> criticalTimeMap) {
+        if(node == null) return 0;
+
+        //leaf node
+        if(node.getChildrens().isEmpty()){
+            return node.getSelfTimeMs();
+        }
+
+        long maxChildCriticalTime = 0;
+        String criticalChildId = null;
+        //Child node
+        for(SpanNode child : node.getChildrens()){
+            long childTime = computeCriticalTime(child,criticalTimeMap);
+            if(childTime>maxChildCriticalTime){
+                maxChildCriticalTime = childTime;
+                criticalChildId = child.getSpan().getSpanId();
+            }
+        }
+
+        if(criticalChildId != null){
+            criticalTimeMap.put(node.getSpan().getSpanId(),maxChildCriticalTime);
+        }
+
+        return node.getSelfTimeMs() + maxChildCriticalTime;
+
+    }
+
+    public List<String> collectCriticalPath(SpanNode node,Map<String,Long> criticalTimeMap,Map<String,SpanNode> nodeMap){
+        List<String> criticalPathSpanIdList = new ArrayList<>();
+        if(node == null) return criticalPathSpanIdList;
+
+        SpanNode current = node;
+        while (current != null) {
+            criticalPathSpanIdList.add(current.getSpan().getSpanId());
+            if (current.getChildrens().isEmpty()) break;
+
+            // Pick the child whose total critical time equals the stored max
+            long expectedMax = criticalTimeMap.getOrDefault(current.getSpan().getSpanId(), 0L);
+            SpanNode criticalChild = null;
+            for (SpanNode child : current.getChildrens()) {
+                long childTotal = child.getSelfTimeMs() + criticalTimeMap.getOrDefault(child.getSpan().getSpanId(), 0L);
+                if (childTotal == expectedMax) {
+                    criticalChild = child;
+                    break;
+                }
+            }
+            current = criticalChild;
+        }
+
+        return criticalPathSpanIdList;
+
+    }
 }
