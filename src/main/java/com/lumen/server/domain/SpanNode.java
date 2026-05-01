@@ -16,6 +16,19 @@ public class SpanNode {
     private List<SpanNode> Childrens = new ArrayList<>();
     private long selfTimeMs;
 
+
+    // Constructor
+    public SpanNode() {}
+
+    public SpanNode(Span span) {
+        this.span = span;
+    }
+    public SpanNode(Span span, List<SpanNode> childrens, long selfTimeMs) {
+        this.span = span;
+        this.Childrens = childrens;
+        this.selfTimeMs = selfTimeMs;
+    }
+    
     // Getter and Setter
     public Span getSpan() {
         return span;

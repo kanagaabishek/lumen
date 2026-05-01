@@ -15,8 +15,9 @@ public class LatencyAnalysisService {
     // Input:  [[10,50], [30,80], [85,95]]
     // Output: [[10,80], [85,95]]  ← overlapping ones merged
 
-    public List<long[]> mergeIntervals(List<long[]> intervals) {
-        // Step 1: sort by start time
+    public List<long[]> mergeIntervals(List<long[]> input) {
+        // Step 1: sort by start time (copy first — callers may pass unmodifiable lists)
+        List<long[]> intervals = new ArrayList<>(input);
         Collections.sort(intervals, (a, b) -> Long.compare(a[0], b[0]));
         // Step 2: walk through, if current start <= previous end, merge
         List<long[]> merged = new ArrayList<>();

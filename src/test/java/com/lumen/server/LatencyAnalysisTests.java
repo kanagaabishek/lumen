@@ -10,7 +10,7 @@ import com.lumen.server.analysis.LatencyAnalysisService;
 import com.lumen.server.domain.Span;
 import com.lumen.server.domain.SpanNode;
 
-public class SelfTimeAlgorithmTest {
+public class LatencyAnalysisTests {
     @Test
     public void testMergeIntervalsNoOverlap() {
         // [[10,50], [60,80]] → [[10,50], [60,80]]
@@ -70,8 +70,8 @@ public class SelfTimeAlgorithmTest {
         // child-A [10ms, 50ms], child-B [30ms, 80ms]
         // merged = [10,80] = 70ms covered
         // selfTime = 30ms
-        Span parentSpan = new Span("span-1", "trace-1", null, "checkout", "POST /buy", 0L, 1000000L, null, false);
-        Span childASpan = new Span("span-2", "trace-1", "span-1", "inventory", "GET /stock", 10000000L, 40000000L, null, false);
+        Span parentSpan = new Span("span-1", "trace-1", null, "checkout", "POST /buy", 0L, 100_00_00L, null, false);
+        Span childASpan = new Span("span-2", "trace-1", "span-1", "inventory", "GET /stock", 100_00_000L, 40000000L, null, false);
         Span childBSpan = new Span("span-3", "trace-1", "span-1", "payment", "POST /pay", 30000000L, 80000000L, null, false);
         SpanNode parentNode = new SpanNode();
         parentNode.setSpan(parentSpan);
