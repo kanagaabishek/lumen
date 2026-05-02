@@ -174,14 +174,6 @@ public class LatencyAnalysisService {
         Collections.sort(sortedChildrens, (a,b) -> Long.compare(a.getSpan().getstartTimeNano()/1_000_000L, b.getSpan().getstartTimeNano()/1_000_000L));
         long previousEndTimeMs = 0;
         SpanNode previousNode = null;
-        if(sortedChildrens.get(0).getSpan().getstartTimeNano()/1_000_000L - root.getSpan().getstartTimeNano()/1_000_000L >= threshold){
-            gaps.add(new Gap(
-                root.getSpan().getSpanId(),
-                sortedChildrens.get(0).getSpan().getSpanId(),
-                root.getSpan().getSpanId(),
-                (sortedChildrens.get(0).getSpan().getstartTimeNano()/1_000_000L - root.getSpan().getstartTimeNano()/1_000_000L)
-            ));
-        }
         // Traverse Through the childrens of the root Node
         for(SpanNode child : sortedChildrens){
             // For the First Child
