@@ -9,8 +9,9 @@ import java.util.Map;
 import com.lumen.server.analysis.LatencyAnalysisService;
 import com.lumen.server.domain.Span;
 import com.lumen.server.domain.SpanNode;
+import com.lumen.server.domain.Gap;
 
-public class ComputionOfTimeAndPathTests {
+public class ComputationOfTimeAndPathAndGapDetectionTests {
 
     private LatencyAnalysisService service = new LatencyAnalysisService();
 
@@ -183,5 +184,83 @@ public class ComputionOfTimeAndPathTests {
         assertEquals(leaf, bottleNeck, "Bottleneck should be the leaf node");
         assertEquals(50, bottleNeck.getSelfTimeMs(), "Bottleneck selfTime should be 50ms");
         assertEquals("span-3", bottleNeck.getSpan().getSpanId(), "Bottleneck spanId should be span-3");
+    }
+
+    /*
+        Test 1 — gap exists above threshold → returns one Gap
+        Test 2 — gap below threshold → returns empty list  
+        Test 3 — gap exists at second level, not root level → recursion finds it
+    */
+
+    @Test
+    public void testDetectGapsAboveThreshold() {
+        // Setup tree:
+        // span-1 (root, selfTime=10ms)
+        //   └─ span-2 (child, selfTime=10ms, starts 30ms after root ends → gap = 20ms)     
+        long rootStart = 0;
+        long rootEnd = 10_000_000;   // 10ms total
+        Span rootSpan = new Span("span-1", "trace-1", null, "service-1", "root-op", rootStart, rootEnd, null, false);
+        SpanNode root = new SpanNode(rootSpan);
+        long childStart = 40_000_000; // starts 30ms after root ends
+        long childEnd = 50_000_000;   // 10ms duration
+        Span childSpan = new Span("span-2", "trace-1", "span-1", "service-1", "child-op", childStart, childEnd, null, false);
+        SpanNode child = new SpanNode(childSpan);
+        root.getChildrens().add(child);
+        List<Gap> gaps = service.findGaps(root, 15); // threshold = 15ms
+        assertEquals(1, gaps.size(), "Should detect one gap above threshold");
+        Gap detectedGap = gaps.get(0);
+        assertEquals("span-1", detectedGap.getBeforeSpanId(), "beforeSpanId should be span-1");
+        assertEquals("span-2", detectedGap.getAfterSpanId(), "afterSpanId should be span-2");
+        assertEquals("span-1", detectedGap.getParentSpanId(), "parentSpanId should be span-1");
+        assertEquals(20, detectedGap.getGapMs(), "gapMs should be 20ms");
+    }
+
+    // Test 2 — gap below threshold → returns empty list
+    @Test
+    public void testDetectGapsBelowThreshold() {
+        // Setup tree:
+        // span-1 (root, selfTime=10ms)
+        //   └─ span-2 (child, selfTime=10ms, starts 20ms after root ends → gap = 10ms)     
+        long rootStart = 0;
+        long rootEnd = 10_000_000;   // 10ms total
+        Span rootSpan = new Span("span-1", "trace-1", null, "service-1", "root-op", rootStart, rootEnd, null, false);
+        SpanNode root = new SpanNode(rootSpan);
+        long childStart = 30_000_000; // starts 20ms after root
+        long childEnd = 40_000_000;   // 10ms duration
+        Span childSpan = new Span("span-2", "trace-1", "span-1", "service-1", "child-op", childStart, childEnd, null, false);
+        SpanNode child = new SpanNode(childSpan);
+        root.getChildrens().add(child);
+        List<Gap> gaps = service.findGaps(root, 15); // threshold = 15ms
+        assertEquals(0, gaps.size(), "Should not detect any gaps below threshold");
+    }
+
+    // Test 3 — gap exists at second level, not root level → recursion finds it
+    @Test
+    public void testDetectGapsAtSecondLevel() {
+        // Setup tree:
+        // span-1 (root)
+        //   └─ span-2 (child)
+        //        └─ span-3 (grandchild, starts 30ms after child ends → gap = 20ms)
+        long rootStart = 0;
+        long rootEnd = 10_000_000;   // 10ms total
+        Span rootSpan = new Span("span-1", "trace-1", null, "service-1", "root-op", rootStart, rootEnd, null, false);   
+        SpanNode root = new SpanNode(rootSpan);
+        long childStart = 10_000_000; // starts immediately after root
+        long childEnd = 20_000_000;   // 10ms duration
+        Span childSpan = new Span("span-2", "trace-1", "span-1", "service-1", "child-op", childStart, childEnd, null, false);
+        SpanNode child = new SpanNode(childSpan);
+        long grandChildStart = 50_000_000; // starts 30ms after
+        long grandChildEnd = 60_000_000;   // 10ms duration
+        Span grandChildSpan = new Span("span-3", "trace-1", "span-2", "service-1", "grandchild-op", grandChildStart, grandChildEnd, null, false);
+        SpanNode grandChild = new SpanNode(grandChildSpan);
+        root.getChildrens().add(child);
+        child.getChildrens().add(grandChild);
+        List<Gap> gaps = service.findGaps(root, 15); // threshold = 15ms
+        assertEquals(1, gaps.size(), "Should detect one gap above threshold");
+        Gap detectedGap = gaps.get(0);
+        assertEquals("span-2", detectedGap.getBeforeSpanId(), "beforeSpanId should be span-2");
+        assertEquals("span-3", detectedGap.getAfterSpanId(), "afterSpanId should be span-3");
+        assertEquals("span-2", detectedGap.getParentSpanId(), "parentSpanId should be span-2");
+        assertEquals(20, detectedGap.getGapMs(), "gapMs should be 20ms");
     }
 }

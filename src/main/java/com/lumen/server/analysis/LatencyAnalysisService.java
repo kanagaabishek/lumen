@@ -3,11 +3,11 @@ package com.lumen.server.analysis;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
 import com.lumen.server.domain.SpanNode;
+import com.lumen.server.domain.Gap;
 
 import java.util.ArrayList;
 
@@ -145,5 +145,71 @@ public class LatencyAnalysisService {
          return bottleNeckNode;
     }
 
-    
+    public List<Gap> findGaps(SpanNode root,long threshold){
+        /*
+            parent [0ms ─────────────────────── 200ms]
+            ├─ child-A [10ms ── 40ms]
+            │
+            │         <- silence here
+            │
+            └─ child-B [120ms ──────── 180ms]
+
+            We traverse through every children of the parent one by one 
+            and caluclate the gap between them
+            GAP = StartTime of Child B - endTime Of Child A
+            if(gap >= threshold) add them into the list
+            the list of gap is returned
+        */
+        if(root == null) return new ArrayList<>();
+
+        if(root.getChildrens() == null || root.getChildrens().isEmpty()){
+            return new ArrayList<>();
+        }
+
+        // Initialization of the Gap ArrayList
+        List<Gap> gaps = new ArrayList<>();
+
+        // Sort the List of Childrens of the root node with the StartTimeNano
+        List<SpanNode> sortedChildrens = new ArrayList<>(root.getChildrens());
+        Collections.sort(sortedChildrens, (a,b) -> Long.compare(a.getSpan().getstartTimeNano()/1_000_000L, b.getSpan().getstartTimeNano()/1_000_000L));
+        long previousEndTimeMs = 0;
+        SpanNode previousNode = null;
+        if(sortedChildrens.get(0).getSpan().getstartTimeNano()/1_000_000L - root.getSpan().getstartTimeNano()/1_000_000L >= threshold){
+            gaps.add(new Gap(
+                root.getSpan().getSpanId(),
+                sortedChildrens.get(0).getSpan().getSpanId(),
+                root.getSpan().getSpanId(),
+                (sortedChildrens.get(0).getSpan().getstartTimeNano()/1_000_000L - root.getSpan().getstartTimeNano()/1_000_000L)
+            ));
+        }
+        // Traverse Through the childrens of the root Node
+        for(SpanNode child : sortedChildrens){
+            // For the First Child
+            if(previousNode == null){
+                previousEndTimeMs = child.getSpan().getEndTimeNano()/1_000_000L;
+                previousNode = child;
+                continue;
+            }
+
+
+            long gap = (child.getSpan().getstartTimeNano()/1_000_000L) - previousEndTimeMs;
+            if(gap>=threshold){
+                gaps.add(new Gap(
+                    previousNode.getSpan().getSpanId(),
+                    child.getSpan().getSpanId(),
+                    child.getSpan().getParentSpanId(),
+                    gap
+                ));
+            }
+
+            previousEndTimeMs = child.getSpan().getEndTimeNano()/1_000_000L;
+            previousNode = child;
+        }
+
+        for (SpanNode child : sortedChildrens) {
+            gaps.addAll(findGaps(child, threshold));
+        }
+
+        return gaps;
+    }
 }
