@@ -56,12 +56,12 @@ public class LatencyAnalysisTests {
     public void testCalculateSelfTimeLeafNode() {
         // single span, no children
         // selfTime should equal duration
-        Span span = new Span("span-1", "trace-1", null, "checkout", "POST /buy", 0L, 1000000L, null, false);
+        Span span = new Span("span-1", "trace-1", null, "checkout", "POST /buy", 0L, 100_00_00L, null, false);
         SpanNode node = new SpanNode();
         node.setSpan(span);
         LatencyAnalysisService service = new LatencyAnalysisService();
         service.calculateSelfTime(node);
-        assertEquals(1000, node.getSelfTimeMs(), "Self time should equal duration for leaf node");
+        assertEquals(1, node.getSelfTimeMs(), "Self time should equal duration for leaf node");
     }
 
     @Test
@@ -70,9 +70,9 @@ public class LatencyAnalysisTests {
         // child-A [10ms, 50ms], child-B [30ms, 80ms]
         // merged = [10,80] = 70ms covered
         // selfTime = 30ms
-        Span parentSpan = new Span("span-1", "trace-1", null, "checkout", "POST /buy", 0L, 100_00_00L, null, false);
-        Span childASpan = new Span("span-2", "trace-1", "span-1", "inventory", "GET /stock", 100_00_000L, 40000000L, null, false);
-        Span childBSpan = new Span("span-3", "trace-1", "span-1", "payment", "POST /pay", 30000000L, 80000000L, null, false);
+        Span parentSpan = new Span("span-1", "trace-1", null, "checkout", "POST /buy", 0L, 100_000_000L, null, false);
+        Span childASpan = new Span("span-2", "trace-1", "span-1", "inventory", "GET /stock", 10_000_000L, 40_000_000L, null, false);
+        Span childBSpan = new Span("span-3", "trace-1", "span-1", "payment", "POST /pay", 30_000_000L, 80_000_000L, null, false);
         SpanNode parentNode = new SpanNode();
         parentNode.setSpan(parentSpan);
         SpanNode childANode = new SpanNode();
@@ -90,8 +90,8 @@ public class LatencyAnalysisTests {
     public void testCalculateSelfTimeChildTakesFullDuration() {
         // parent [0, 100ms], child [0, 100ms]
         // selfTime = 0  (not negative)
-        Span parentSpan = new Span("span-1", "trace-1", null, "checkout", "POST /buy", 0L, 1000000L, null, false);
-        Span childSpan = new Span("span-2", "trace-1", "span-1", "inventory", "GET /stock", 0L, 1000000L
+        Span parentSpan = new Span("span-1", "trace-1", null, "checkout", "POST /buy", 0L, 100_000_000L, null, false);
+        Span childSpan = new Span("span-2", "trace-1", "span-1", "inventory", "GET /stock", 0L, 100_000_000L
         , null, false);
         SpanNode parentNode = new SpanNode();
         parentNode.setSpan(parentSpan);

@@ -3,6 +3,7 @@ package com.lumen.server.analysis;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
@@ -39,17 +40,17 @@ public class LatencyAnalysisService {
 
     public void calculateSelfTime(SpanNode node) {
         if (node == null) return;
+
+        if (node.getChildrens().isEmpty()) {
+            // Leaf node — all time is self time
+            node.setSelfTimeMs(node.getSpan().getDurationMs());
+            return;
+        }
         
         // First recurse into children
         // (children must have their selfTime calculated before parent)
         for (SpanNode child : node.getChildrens()) {
             calculateSelfTime(child);
-        }
-        
-        if (node.getChildrens().isEmpty()) {
-            // Leaf node — all time is self time
-            node.setSelfTimeMs(node.getSpan().getDurationMs());
-            return;
         }
         
         // Collect child intervals
@@ -75,7 +76,7 @@ public class LatencyAnalysisService {
         node.setSelfTimeMs(Math.max(0, selfTime));
     }
     
-    public long computeCriticalTime(SpanNode node, Map<String,Long> criticalTimeMap) {
+    public long computeCriticalTime(SpanNode node, Map<String,String> criticalTimeMap) {
         if(node == null) return 0;
 
         //leaf node
@@ -95,14 +96,14 @@ public class LatencyAnalysisService {
         }
 
         if(criticalChildId != null){
-            criticalTimeMap.put(node.getSpan().getSpanId(),maxChildCriticalTime);
+            criticalTimeMap.put(node.getSpan().getSpanId(),criticalChildId);
         }
 
         return node.getSelfTimeMs() + maxChildCriticalTime;
 
     }
 
-    public List<String> collectCriticalPath(SpanNode node,Map<String,Long> criticalTimeMap,Map<String,SpanNode> nodeMap){
+    public List<String> collectCriticalPath(SpanNode node,Map<String,String> criticalPathMap,Map<String,SpanNode> nodeMap){
         List<String> criticalPathSpanIdList = new ArrayList<>();
         if(node == null) return criticalPathSpanIdList;
 
@@ -112,15 +113,9 @@ public class LatencyAnalysisService {
             if (current.getChildrens().isEmpty()) break;
 
             // Pick the child whose total critical time equals the stored max
-            long expectedMax = criticalTimeMap.getOrDefault(current.getSpan().getSpanId(), 0L);
-            SpanNode criticalChild = null;
-            for (SpanNode child : current.getChildrens()) {
-                long childTotal = child.getSelfTimeMs() + criticalTimeMap.getOrDefault(child.getSpan().getSpanId(), 0L);
-                if (childTotal == expectedMax) {
-                    criticalChild = child;
-                    break;
-                }
-            }
+            String expectedMax = criticalPathMap.getOrDefault(current.getSpan().getSpanId(), null);
+            SpanNode criticalChild = nodeMap.get(expectedMax);
+            if(criticalChild == null) break;
             current = criticalChild;
         }
 
@@ -139,11 +134,16 @@ public class LatencyAnalysisService {
          SpanNode bottleNeckNode = null;
          for(String criticalSpanId : criticalPathSpanIdList){
             SpanNode currNode = nodeMap.get(criticalSpanId);
-            if(currNode != null && currNode.getSelfTimeMs()>bottleNeckNode.getSelfTimeMs()){
-                bottleNeckNode = currNode;
+            if(currNode != null){
+                if(bottleNeckNode != null){
+                    if(currNode.getSelfTimeMs()>bottleNeckNode.getSelfTimeMs()) bottleNeckNode = currNode;
+                }else bottleNeckNode = currNode;
+                
             }
          }
 
          return bottleNeckNode;
     }
+
+    
 }
