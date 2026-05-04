@@ -57,7 +57,7 @@ public class LatencyAnalysisService {
         List<long[]> intervals = new ArrayList<>();
         for (SpanNode child : node.getChildrens()) {
             intervals.add(new long[]{
-                child.getSpan().getstartTimeNano() / 1_000_000,
+                child.getSpan().getStartTimeByNano() / 1_000_000,
                 child.getSpan().getEndTimeNano()/ 1_000_000
             });
         }
@@ -171,7 +171,7 @@ public class LatencyAnalysisService {
 
         // Sort the List of Childrens of the root node with the StartTimeNano
         List<SpanNode> sortedChildrens = new ArrayList<>(root.getChildrens());
-        Collections.sort(sortedChildrens, (a,b) -> Long.compare(a.getSpan().getstartTimeNano()/1_000_000L, b.getSpan().getstartTimeNano()/1_000_000L));
+        Collections.sort(sortedChildrens, (a,b) -> Long.compare(a.getSpan().getStartTimeByNano()/1_000_000L, b.getSpan().getStartTimeByNano()/1_000_000L));
         long previousEndTimeMs = 0;
         SpanNode previousNode = null;
         // Traverse Through the childrens of the root Node
@@ -184,7 +184,7 @@ public class LatencyAnalysisService {
             }
 
 
-            long gap = (child.getSpan().getstartTimeNano()/1_000_000L) - previousEndTimeMs;
+            long gap = (child.getSpan().getStartTimeByNano()/1_000_000L) - previousEndTimeMs;
             if(gap>=threshold){
                 gaps.add(new Gap(
                     previousNode.getSpan().getSpanId(),

@@ -59,7 +59,7 @@ public class Span{
         this.operationName = operationName;
     }
 
-    public long getstartTimeNano(){
+    public long getStartTimeByNano(){
         return startTimeNano;
     }
 

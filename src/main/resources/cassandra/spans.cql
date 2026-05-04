@@ -12,5 +12,4 @@ CREATE TABLE IF NOT EXISTS lumen.spans (
     status          TEXT,
     PRIMARY KEY (trace_id, start_time_nano, span_id)
 ) WITH CLUSTERING ORDER BY (start_time_nano ASC, span_id ASC)
-    AND default_time_to_live = 604800
-    AND comment = 'Stores individual spans from distributed traces. Partitioned by trace_id for co-location of related spans.';
+    AND default_time_to_live = 604800;
