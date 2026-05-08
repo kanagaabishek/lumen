@@ -8,13 +8,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
 import com.lumen.server.analysis.TraceReconstructionService;
 import com.lumen.server.domain.Span;
 import com.lumen.server.domain.SpanNode;
 
-@SpringBootTest
 public class BuildTreeTest {
     @Test
     public void testBuildTreeWithSingleSpan() {

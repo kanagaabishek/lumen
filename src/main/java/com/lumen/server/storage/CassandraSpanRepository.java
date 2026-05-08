@@ -7,12 +7,14 @@ import com.datastax.oss.driver.api.core.CqlSession;
 import com.datastax.oss.driver.api.core.cql.BatchStatement;
 import com.datastax.oss.driver.api.core.cql.BatchType;
 import com.datastax.oss.driver.api.core.cql.PreparedStatement;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Repository;
 
 import com.lumen.server.domain.Span;
 import com.lumen.server.domain.TraceSummary;
 
 @Repository
+@ConditionalOnProperty(name = "cassandra.enabled", havingValue = "true", matchIfMissing = false)
 public class CassandraSpanRepository implements SpanRepository {
 
     private final CqlSession session;

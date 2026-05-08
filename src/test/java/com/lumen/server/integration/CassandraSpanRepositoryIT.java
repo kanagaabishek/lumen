@@ -23,16 +23,7 @@ public class CassandraSpanRepositoryIT {
 
     @Test
     public void testSaveAndFindByTraceId() {
-        Span span = new Span();
-        span.setTraceId("test-trace-id");
-        span.setSpanId("test-span-id");
-        span.setParentSpan(null);
-        span.setServiceName("test-service");
-        span.setOperationName("test-operation");
-        long startNano = System.nanoTime();
-        span.setStartTimeNano(startNano);
-        span.setEndTimeNano(startNano + 1_000_000);
-        span.setHasError(false);
+        Span span = new Span("test-trace-id", "test-span-id", null, "test-service", "test-operation", System.nanoTime(), System.nanoTime() + 1_000_000,null,false);
 
         repository.save(span);
 
