@@ -1,4 +1,4 @@
-package com.lumen.server;
+package com.lumen.server.unit;
 
 import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;

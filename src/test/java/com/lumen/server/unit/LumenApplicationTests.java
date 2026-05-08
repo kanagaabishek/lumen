@@ -1,4 +1,4 @@
-package com.lumen.server;
+package com.lumen.server.unit;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

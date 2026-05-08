@@ -1,4 +1,4 @@
-package com.lumen.server;
+package com.lumen.server.unit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
