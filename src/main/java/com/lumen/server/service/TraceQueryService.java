@@ -10,10 +10,14 @@ import com.lumen.server.analysis.TraceReconstructionService;
 import com.lumen.server.domain.SpanNode;
 import com.lumen.server.domain.TraceBuildResult;
 import com.lumen.server.domain.TraceResponse;
+import com.lumen.server.domain.TraceSummary;
 import com.lumen.server.domain.Gap;
 import com.lumen.server.domain.Span;
 import java.util.Map;
 
+import org.springframework.stereotype.Service;
+
+@Service
 public class TraceQueryService {
     private final SpanRepository spanRepository;
     private final LatencyAnalysisService latencyAnalysisService;
@@ -71,5 +75,13 @@ public class TraceQueryService {
         }
 
         return response;
+    }
+
+    public List<TraceSummary> listTraces(String service, long fromMs, long toMs) {
+        return spanRepository.findByServiceAndTimeWindow(service, fromMs, toMs);
+    }
+
+    public List<String> listServices() {
+        return spanRepository.findAllServices();
     }
 }

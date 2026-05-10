@@ -13,7 +13,7 @@ import java.util.List;
 
 public class SpanNode {
     private Span span;
-    private List<SpanNode> Childrens = new ArrayList<>();
+    private List<SpanNode> childrens = new ArrayList<>();
     private long selfTimeMs;
 
 
@@ -25,7 +25,7 @@ public class SpanNode {
     }
     public SpanNode(Span span, List<SpanNode> childrens, long selfTimeMs) {
         this.span = span;
-        this.Childrens = childrens;
+        this.childrens = childrens;
         this.selfTimeMs = selfTimeMs;
     }
     
@@ -37,10 +37,10 @@ public class SpanNode {
         this.span = span;
     }
     public List<SpanNode> getChildrens() {
-        return Childrens;
+        return childrens;
     }
     public void setChildrens(List<SpanNode> childrens) {
-        Childrens = childrens;
+        this.childrens = childrens;
     }
     public String getParentSpan() {
         return span.getParentSpanId();

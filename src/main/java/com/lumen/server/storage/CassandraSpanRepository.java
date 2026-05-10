@@ -6,8 +6,6 @@ import java.util.List;
 import java.util.Map;
 
 import com.datastax.oss.driver.api.core.CqlSession;
-import com.datastax.oss.driver.api.core.cql.BatchStatement;
-import com.datastax.oss.driver.api.core.cql.BatchType;
 import com.datastax.oss.driver.api.core.cql.BoundStatement;
 import com.datastax.oss.driver.api.core.cql.PreparedStatement;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
