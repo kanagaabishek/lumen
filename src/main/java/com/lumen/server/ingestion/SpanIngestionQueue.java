@@ -14,6 +14,7 @@ public class SpanIngestionQueue {
 
     private final BlockingQueue<Span> queue;
     private final AtomicLong droppedCount = new AtomicLong(0);
+    private final AtomicLong ingestedCount = new AtomicLong(0);
 
     public SpanIngestionQueue() {
         this.queue = new LinkedBlockingQueue<>(10_000); // fixed capacity
@@ -24,8 +25,11 @@ public class SpanIngestionQueue {
             droppedCount.incrementAndGet();
             return false;
         }
-        return queue.offer(span);
-        
+        boolean result = queue.offer(span);
+        if (result) {
+            ingestedCount.incrementAndGet();
+        }
+        return result;
     }
 
     public List<Span> drain(int maxBatch) {
@@ -40,5 +44,9 @@ public class SpanIngestionQueue {
 
     public int getQueueDepth() {
         return queue.size();
+    }
+
+    public long getIngestedCount() {
+        return ingestedCount.get();
     }
 }
