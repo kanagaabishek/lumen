@@ -30,13 +30,16 @@
 		<java.version>21</java.version>
 	</properties>
 	<dependencies>
-    <!-- Spring Boot base -->
     <dependency>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter</artifactId>
     </dependency>
 
-    <!-- Spring Web for REST API (Stage 5) -->
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<optional>true</optional>
+		</dependency>
     <dependency>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-web</artifactId>
@@ -71,13 +74,6 @@
         <groupId>io.grpc</groupId>
         <artifactId>grpc-protobuf</artifactId>
         <version>1.60.0</version>
-    </dependency>
-
-    <!-- Lombok -->
-    <dependency>
-        <groupId>org.projectlombok</groupId>
-        <artifactId>lombok</artifactId>
-        <optional>true</optional>
     </dependency>
 
     <!-- Testing -->
