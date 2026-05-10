@@ -47,7 +47,6 @@ public class LatencyAnalysisService {
             return;
         }
         
-        // First recurse into children
         // (children must have their selfTime calculated before parent)
         for (SpanNode child : node.getChildrens()) {
             calculateSelfTime(child);

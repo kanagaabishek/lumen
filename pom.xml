@@ -40,6 +40,12 @@
 			<artifactId>lombok</artifactId>
 			<optional>true</optional>
 		</dependency>
+
+	<dependency>
+		<groupId>io.grpc</groupId>
+		<artifactId>grpc-services</artifactId>
+		<version>1.60.0</version>
+	</dependency>
     <dependency>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-web</artifactId>

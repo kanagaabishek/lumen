@@ -16,4 +16,7 @@ public interface SpanRepository {
         long fromMs,
         long toMs
     );
+
+    void saveService(String serviceName, long timestampMs);
+    List<String> findAllServices();
 }

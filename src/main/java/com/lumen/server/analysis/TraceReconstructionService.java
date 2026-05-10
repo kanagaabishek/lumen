@@ -8,11 +8,12 @@ import org.springframework.stereotype.Service;
 
 import com.lumen.server.domain.Span;
 import com.lumen.server.domain.SpanNode;
+import com.lumen.server.domain.TraceBuildResult;
 
 @Service
 public class TraceReconstructionService {
      
-    public SpanNode buildTree(List<Span> spans) {
+    public TraceBuildResult buildTree(List<Span> spans) {
 
         Map<String, SpanNode> nodeMap = new HashMap<>();
 
@@ -43,7 +44,7 @@ public class TraceReconstructionService {
             }
         }
         
-        return root;
+        return new TraceBuildResult(root, nodeMap);
 
     }
     

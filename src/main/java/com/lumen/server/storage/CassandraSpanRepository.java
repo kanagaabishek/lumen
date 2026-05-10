@@ -22,6 +22,8 @@ public class CassandraSpanRepository implements SpanRepository {
     private final PreparedStatement insertTraceIndex;
     private final PreparedStatement findByTraceId;
     private final PreparedStatement findByServiceBucket;
+    private final PreparedStatement insertService;
+    private final PreparedStatement findAllServices;
 
     public CassandraSpanRepository(CqlSession session) {
         this.session = session;
@@ -33,6 +35,13 @@ public class CassandraSpanRepository implements SpanRepository {
             "FROM lumen.trace_index " +
             "WHERE service_name = ? AND bucket = ? " +
             "AND start_time_ms >= ? AND start_time_ms <= ?"
+        );
+
+        this.insertService = session.prepare(
+            "INSERT INTO lumen.services (service_name, last_seen_ms) VALUES (?, ?)"
+        );
+        this.findAllServices = session.prepare(
+            "SELECT service_name FROM lumen.services"
         );
     }
 
@@ -64,7 +73,8 @@ public class CassandraSpanRepository implements SpanRepository {
                 span.getOperationName()
             ));
         }
-
+        saveService(span.getServiceName(), 
+            span.getStartTimeByNano() / 1_000_000);
         session.execute(batch);
     }
 
@@ -116,5 +126,18 @@ public class CassandraSpanRepository implements SpanRepository {
         summary.setHasError(row.getBoolean("has_error"));
         summary.setRootOperation(row.getString("root_operation"));
         return summary;
+    }
+
+    @Override
+    public void saveService(String serviceName, long timestampMs) {
+        session.execute(insertService.bind(serviceName, timestampMs));
+    }
+
+    @Override
+    public List<String> findAllServices() {
+        var resultSet = session.execute(findAllServices.bind());
+        List<String> services = new ArrayList<>();
+        resultSet.forEach(row -> services.add(row.getString("service_name")));
+        return services;
     }
 }
