@@ -15,6 +15,9 @@ import io.opentelemetry.proto.trace.v1.ResourceSpans;
 import io.opentelemetry.proto.trace.v1.ScopeSpans;
 import io.grpc.stub.StreamObserver;
 
+import org.springframework.stereotype.Service;
+
+@Service
 public class TraceServiceImpl extends TraceServiceGrpc.TraceServiceImplBase{
     private final SpanRepository repository;
     
