@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+    cassandra:
+      image: cassandra:4.1
+      container_name: lumen-cassandra
+      ports:
+        - "9042:9042"
+      environment:
+        - CASSANDRA_CLUSTER_NAME=lumen-cluster
+        - CASSANDRA_DC=datacenter1
+        - CASSANDRA_BROADCAST_RPC_ADDRESS=cassandra
+      healthcheck:
+        test: ["CMD", "cqlsh", "-e", "describe keyspaces"]
+        interval: 30s
+        timeout: 10s
+        retries: 5
+        start_period: 60s
+      volumes:
+      - cassandra_data:/var/lib/cassandra
+
+    lumen:
+      build: .
+      container_name: lumen-server
+      ports:
+       - "8080:8080"
+       - "9090:9090"
+      environment:
+        - CASSANDRA_ENABLED=true
+        - CASSANDRA_CONTACT_POINTS=cassandra
+        - CASSANDRA_PORT=9042
+        - CASSANDRA_KEYSPACE=lumen
+        - CASSANDRA_DC=datacenter1
+      depends_on:
+       cassandra:
+         condition: service_healthy
+
+volumes:
+ cassandra_data:
+
+      

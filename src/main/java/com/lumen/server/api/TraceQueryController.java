@@ -23,11 +23,6 @@ public class TraceQueryController {
         this.traceQueryService = traceQueryService;
     }
 
-    @GetMapping("/health")
-    public ResponseEntity<String> healthCheck() {
-        return ResponseEntity.ok("OK");
-    }
-
     @GetMapping("/traces/{traceId}")
     public ResponseEntity<TraceResponse> getTrace(@PathVariable String traceId) {
         TraceResponse response = traceQueryService.getTrace(traceId);
