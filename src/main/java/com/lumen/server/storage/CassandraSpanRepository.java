@@ -1,11 +1,14 @@
 package com.lumen.server.storage;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.datastax.oss.driver.api.core.CqlSession;
 import com.datastax.oss.driver.api.core.cql.BatchStatement;
 import com.datastax.oss.driver.api.core.cql.BatchType;
+import com.datastax.oss.driver.api.core.cql.BoundStatement;
 import com.datastax.oss.driver.api.core.cql.PreparedStatement;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Repository;
@@ -27,8 +30,18 @@ public class CassandraSpanRepository implements SpanRepository {
 
     public CassandraSpanRepository(CqlSession session) {
         this.session = session;
-        this.insertSpan = session.prepare("INSERT INTO lumen.spans (trace_id, span_id, parent_span_id, service_name, operation_name, start_time_nano, end_time_nano, duration_ms, attributes, has_error) VALUES (?,?,?,?,?,?,?,?,?,?)");
-        this.insertTraceIndex = session.prepare("INSERT INTO lumen.trace_index (service_name,bucket,start_time_ms,trace_id,duration_ms,has_error,root_operation) VALUES (?,?,?,?,?,?,?)");
+        this.insertSpan = session.prepare(
+            "INSERT INTO lumen.spans " +
+            "(trace_id, span_id, parent_span_id, service_name, operation_name, " +
+            "start_time_nano, end_time_nano, duration_ms, attributes, has_error) " +
+            "VALUES (:trace_id, :span_id, :parent_span_id, :service_name, :operation_name, " +
+            ":start_time_nano, :end_time_nano, :duration_ms, :attributes, :has_error)"
+        );
+        this.insertTraceIndex = session.prepare(
+            "INSERT INTO lumen.trace_index " +
+            "(service_name, bucket, start_time_ms, trace_id, duration_ms, has_error, root_operation) " +
+            "VALUES (:service_name, :bucket, :start_time_ms, :trace_id, :duration_ms, :has_error, :root_operation)"
+        );
         this.findByTraceId = session.prepare("SELECT * FROM lumen.spans WHERE trace_id = ?");
         this.findByServiceBucket = session.prepare(
             "SELECT service_name, bucket, start_time_ms, trace_id, duration_ms, has_error, root_operation " +
@@ -47,35 +60,40 @@ public class CassandraSpanRepository implements SpanRepository {
 
     @Override
     public void save(Span span) {
-        BatchStatement batch = BatchStatement.newInstance(BatchType.LOGGED)
-            .add(insertSpan.bind(
-                span.getTraceId(),
-                span.getSpanId(),
-                span.getParentSpanId(),
-                span.getServiceName(),
-                span.getOperationName(),
-                span.getStartTimeByNano(),
-                span.getEndTimeNano(),
-                (span.getEndTimeNano() - span.getStartTimeByNano()) / 1_000_000,
-                span.getAttributes().toString(),
-                span.isHasError()
-            ));
+        Map<String, String> attributes = span.getAttributes() != null ? span.getAttributes() : new HashMap<>();
 
+        BoundStatement boundSpan = insertSpan.bind()
+            .setString("trace_id", span.getTraceId())
+            .setString("span_id", span.getSpanId())
+            .setString("parent_span_id", span.getParentSpanId())
+            .setString("service_name", span.getServiceName())
+            .setString("operation_name", span.getOperationName())
+            .setLong("start_time_nano", span.getStartTimeByNano())
+            .setLong("end_time_nano", span.getEndTimeNano())
+            .setLong("duration_ms", (span.getEndTimeNano() - span.getStartTimeByNano()) / 1_000_000)
+            .setMap("attributes", attributes, String.class, String.class)
+            .setBoolean("has_error", span.isHasError());
+
+        // Always execute the span insert first
+        session.execute(boundSpan);
+
+        // Write to trace_index if this is a root span
         if (span.getParentSpanId() == null || span.getParentSpanId().isEmpty()) {
             long bucket = span.getStartTimeByNano() / (3_600_000_000_000L); // bucket by hour
-            batch.add(insertTraceIndex.bind(
-                span.getServiceName(),
-                bucket,
-                span.getStartTimeByNano() / 1_000_000,
-                span.getTraceId(),
-                (span.getEndTimeNano() - span.getStartTimeByNano()) / 1_000_000,
-                span.isHasError(),
-                span.getOperationName()
-            ));
+
+            BoundStatement boundIndex = insertTraceIndex.bind()
+                .setString("service_name", span.getServiceName())
+                .setLong("bucket", bucket)
+                .setLong("start_time_ms", span.getStartTimeByNano() / 1_000_000)
+                .setString("trace_id", span.getTraceId())
+                .setLong("duration_ms", (span.getEndTimeNano() - span.getStartTimeByNano()) / 1_000_000)
+                .setBoolean("has_error", span.isHasError())
+                .setString("root_operation", span.getOperationName());
+
+            session.execute(boundIndex);
         }
-        saveService(span.getServiceName(), 
-            span.getStartTimeByNano() / 1_000_000);
-        session.execute(batch);
+
+        saveService(span.getServiceName(), span.getStartTimeByNano() / 1_000_000);
     }
 
     @Override

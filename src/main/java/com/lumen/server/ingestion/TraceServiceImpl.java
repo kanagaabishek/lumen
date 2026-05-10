@@ -84,6 +84,8 @@ public class TraceServiceImpl extends TraceServiceGrpc.TraceServiceImplBase{
                         repository.save(span);
                     } catch (Exception e) {
                         failedCount++;
+                        System.err.println("Failed to save span: " + e.getMessage());
+                        e.printStackTrace();
                     }
                 }
             }

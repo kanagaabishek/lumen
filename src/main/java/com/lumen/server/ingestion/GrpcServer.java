@@ -2,6 +2,7 @@ package com.lumen.server.ingestion;
 
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
+import io.grpc.protobuf.services.ProtoReflectionService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.stereotype.Component;
@@ -28,6 +29,7 @@ public class GrpcServer implements SmartLifecycle {
             server = ServerBuilder
                 .forPort(port)
                 .addService(traceService)
+                .addService(ProtoReflectionService.newInstance())
                 .build()
                 .start();
             running = true;
