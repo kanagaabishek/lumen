@@ -16,24 +16,17 @@ public class CassandraConfig {
     public CqlSession cqlSession(
             @Value("${CASSANDRA_CONTACT_POINTS:localhost}") String contactPoints,
             @Value("${CASSANDRA_PORT:9042}") int port,
-            @Value("${CASSANDRA_KEYSPACE:lumen}") String keyspace,
             @Value("${CASSANDRA_DC:datacenter1}") String dc) {
-        
         CqlSession session = CqlSession.builder()
             .addContactPoint(new InetSocketAddress(contactPoints, port))
             .withLocalDatacenter(dc)
-            .withKeyspace(keyspace)
             .build();
-        
-        initializeSchema(session);
-        return session;
-    }
 
-    private void initializeSchema(CqlSession session) {
         session.execute(
             "CREATE KEYSPACE IF NOT EXISTS lumen " +
             "WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1}"
         );
+
         session.execute(
             "CREATE TABLE IF NOT EXISTS lumen.spans (" +
             "trace_id TEXT, start_time_nano BIGINT, span_id TEXT, " +
@@ -57,6 +50,15 @@ public class CassandraConfig {
             "PRIMARY KEY (service_name)" +
             ") WITH default_time_to_live = 2592000"
         );
+
         System.out.println("Schema initialized successfully");
+
+        session.close();
+
+        return CqlSession.builder()
+            .addContactPoint(new InetSocketAddress(contactPoints, port))
+            .withLocalDatacenter(dc)
+            .withKeyspace("lumen")  // keyspace now exists
+            .build();
     }
 }
