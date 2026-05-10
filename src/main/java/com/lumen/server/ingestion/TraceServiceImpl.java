@@ -19,10 +19,10 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class TraceServiceImpl extends TraceServiceGrpc.TraceServiceImplBase{
-    private final SpanRepository repository;
-    
-    public TraceServiceImpl(SpanRepository repository) {
-        this.repository = repository;
+    private final SpanIngestionQueue ingestionQueue;
+
+    public TraceServiceImpl(SpanIngestionQueue ingestionQueue) {
+        this.ingestionQueue = ingestionQueue;
     }
 
     private Span convertToSpan(
@@ -81,7 +81,8 @@ public class TraceServiceImpl extends TraceServiceGrpc.TraceServiceImplBase{
                 for (var protoSpan : scopeSpans.getSpansList()) {
                     try {
                         Span span = convertToSpan(protoSpan, serviceName);
-                        repository.save(span);
+                        boolean accepted = ingestionQueue.offer(span);
+                        if (!accepted) failedCount++;
                     } catch (Exception e) {
                         failedCount++;
                         System.err.println("Failed to save span: " + e.getMessage());
