@@ -32,9 +32,9 @@ never leaves your infrastructure.
 
 
 # Architecture
-![Architecture Diagram](<Screenshot 2026-05-11 at 7.01.17 AM.png>)
+![Architecture Diagram](<Architecture-diagram.png>)
 
-![FLOW DIAGRAM](<Screenshot 2026-05-11 at 7.02.43 AM.png>)
+![FLOW DIAGRAM](<Flow-diagram.png>)
 
 ## How to Run
 
