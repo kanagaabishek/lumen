@@ -1,0 +1,18 @@
+{
+  "name": "lumen-node-client-example",
+  "version": "1.0.0",
+  "description": "Node.js checkout simulation example for Lumen distributed tracing",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "dependencies": {
+    "@opentelemetry/api": "^1.7.0",
+    "@opentelemetry/sdk-node": "latest",
+    "@opentelemetry/sdk-trace-node": "latest",
+    "@opentelemetry/exporter-trace-otlp-grpc": "latest",
+    "@opentelemetry/resources": "latest",
+    "@opentelemetry/semantic-conventions": "latest",
+    "@grpc/grpc-js": "^1.9.0"
+  }
+}
