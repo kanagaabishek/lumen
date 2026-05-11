@@ -85,7 +85,10 @@ Bucketing by hour distributes the load: (checkout-service, hour-18500) and (chec
 One span in JSON is roughly 400-600 bytes. The same span in protobuf is 100-150 bytes — about 3-4x smaller
 The throughput difference is significant which makes gRPC highly scalable and efficient in handling millions of interaction per second
 
-also the gRPC is protobuf -- which is schema enforced that handles the malformed data
+gRPC uses Protocol Buffers — a schema-enforced binary format. 
+Malformed data fails at deserialization rather than being silently 
+stored as garbage. HTTP/2 multiplexing allows multiple requests over 
+one connection, unlike HTTP/1.1 which requires one connection per request.
 
 ### Why async ingestion queue
 Synchronous writes mean gRPC threads block waiting for Cassandra. At 10,000 spans/second with 10ms writes, you need 100 concurrent threads just to keep up — the gRPC pool exhausts and requests fail.
@@ -99,11 +102,9 @@ parent [10ms → 70ms] = 60ms duration
 child-A [10ms → 50ms] = 40ms
 child-B [30ms → 70ms] = 40ms
 
-Naive sum: 60 - (40+40) = -20ms — impossible
-Interval union: merge [10,50] and [30,70] = [10,70] = 60ms covered
-Self time: 60 - 60 = 0ms — parent was entirely waiting on children
-
-as the above example, if children spend 20-80ms and parent 10-70 the total ms is not 120 ms it's 70ms
+Services make parallel downstream calls. Naive self-time calculation 
+sums child durations — which double-counts overlapping time and 
+produces negative results
 
 ### Why BATCH writes
 You write to two tables — spans and trace_index. What happens if the first write succeeds and the second fails due to a Cassandra node hiccup?
