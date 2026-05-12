@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lumen — Distributed Trace Explorer</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg-primary: #0f1217;
+      --bg-secondary: #1a1f27;
+      --bg-tertiary: #25293b;
+      --text-primary: #e8eaed;
+      --text-secondary: #9ca3af;
+      --text-tertiary: #6b7280;
+      --border: #30353f;
+      --border-light: #3d424f;
+      --accent: #4f88f5;
+      --accent-hover: #5a94ff;
+      --error: #ef5350;
+      --warning: #ffa500;
+      --success: #66bb6a;
+      --critical: #ff6b6b;
+      --duration-good: #66bb6a;
+      --duration-warn: #ffa500;
+      --duration-bad: #ef5350;
+    }
+
+    body.light-theme {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f8f9fa;
+      --bg-tertiary: #f0f2f5;
+      --text-primary: #1a1a1a;
+      --text-secondary: #4b5563;
+      --text-tertiary: #8b95a5;
+      --border: #e3e6eb;
+      --border-light: #d0d4db;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'SF Mono', 'Fira Code', monospace;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    /* Header */
+    .header {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .logo-icon {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .logo-text {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .logo-title {
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: -0.5px;
+    }
+
+    .logo-subtitle {
+      font-size: 11px;
+      color: var(--text-tertiary);
+      font-weight: 400;
+    }
+
+    .header-search {
+      flex: 1;
+      max-width: 320px;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 8px 12px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-primary);
+      font-size: 13px;
+      transition: all 0.2s;
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      background: var(--bg-primary);
+    }
+
+    .search-input::placeholder {
+      color: var(--text-tertiary);
+    }
+
+    .header-info {
+      display: flex;
+      gap: 16px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .info-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .info-value {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    /* Main layout */
+    .container {
+      display: flex;
+      height: calc(100vh - 61px);
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 260px;
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar-section {
+      padding: 16px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .sidebar-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-tertiary);
+      padding: 0 4px 8px;
+      display: block;
+    }
+
+    .sidebar-items {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .service-item {
+      padding: 10px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--text-secondary);
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid transparent;
+    }
+
+    .service-item:hover {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+
+    .service-item.active {
+      background: var(--bg-tertiary);
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .service-status {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--success);
+      flex-shrink: 0;
+    }
+
+    .sidebar-empty {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-tertiary);
+      font-size: 12px;
+      padding: 20px;
+      text-align: center;
+    }
+
+    /* Main content */
+    .main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Toolbar */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    .toolbar-label {
+      font-size: 12px;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .time-buttons {
+      display: flex;
+      gap: 8px;
+    }
+
+    .time-btn {
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 12px;
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 500;
+      transition: all 0.15s;
+    }
+
+    .time-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .time-btn.active {
+      border-color: var(--accent);
+      background: var(--bg-tertiary);
+      color: var(--accent);
+    }
+
+    .toolbar-spacer {
+      flex: 1;
+    }
+
+    /* Section title */
+    .section-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .trace-count {
+      color: var(--accent);
+    }
+
+    /* Trace table */
+    .trace-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .trace-table th {
+      text-align: left;
+      padding: 12px 16px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-tertiary);
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-secondary);
+      position: sticky;
+      top: 0;
+    }
+
+    .trace-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-secondary);
+    }
+
+    .trace-table tbody tr {
+      transition: all 0.1s;
+      cursor: pointer;
+    }
+
+    .trace-table tbody tr:hover {
+      background: var(--bg-tertiary);
+    }
+
+    .trace-table tbody tr:hover td {
+      color: var(--text-primary);
+    }
+
+    .trace-id {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 12px;
+      color: var(--accent);
+    }
+
+    .duration-cell {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .duration-bar {
+      height: 3px;
+      border-radius: 2px;
+      min-width: 4px;
+      flex-shrink: 0;
+      background: var(--duration-good);
+    }
+
+    .duration-bar.warning {
+      background: var(--duration-warn);
+    }
+
+    .duration-bar.critical {
+      background: var(--duration-bad);
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .status-ok {
+      background: rgba(102, 187, 106, 0.15);
+      color: var(--success);
+    }
+
+    .status-error {
+      background: rgba(239, 83, 80, 0.15);
+      color: var(--error);
+    }
+
+    /* Empty state */
+    .empty-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-tertiary);
+      gap: 12px;
+    }
+
+    .empty-icon {
+      font-size: 48px;
+      opacity: 0.3;
+    }
+
+    .empty-text {
+      font-size: 14px;
+    }
+
+    /* Loading spinner */
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Detail panel */
+    .detail-panel {
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: 600px;
+      height: 100vh;
+      background: var(--bg-secondary);
+      border-left: 1px solid var(--border);
+      overflow-y: auto;
+      z-index: 100;
+      transform: translateX(100%);
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .detail-panel.open {
+      transform: translateX(0);
+    }
+
+    .panel-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      position: sticky;
+      top: 0;
+      background: var(--bg-secondary);
+      z-index: 10;
+    }
+
+    .panel-title {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex: 1;
+    }
+
+    .panel-trace-id {
+      font-size: 11px;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .panel-duration {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -1px;
+    }
+
+    .panel-duration-unit {
+      font-size: 16px;
+      color: var(--text-secondary);
+      margin-left: 4px;
+    }
+
+    .close-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      width: 36px;
+      height: 36px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: all 0.15s;
+    }
+
+    .close-btn:hover {
+      background: var(--bg-tertiary);
+      border-color: var(--border-light);
+      color: var(--text-primary);
+    }
+
+    /* Theme toggle */
+    .theme-toggle {
+      display: flex;
+      align-items: center;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 2px;
+      cursor: pointer;
+      gap: 2px;
+    }
+
+    .theme-btn {
+      width: 32px;
+      height: 32px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 16px;
+      transition: all 0.2s;
+    }
+
+    .theme-btn.active {
+      background: var(--accent);
+      color: white;
+    }
+
+    .theme-btn:hover:not(.active) {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+    }
+
+    .panel-body {
+      padding: 24px;
+    }
+
+    /* Stats grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    .stat-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-tertiary);
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+
+    .stat-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .stat-value.accent {
+      color: var(--accent);
+    }
+
+    .stat-value.warning {
+      color: var(--warning);
+    }
+
+    .stat-value.error {
+      color: var(--error);
+    }
+
+    /* Alert callout */
+    .alert {
+      background: rgba(239, 83, 80, 0.1);
+      border: 1px solid var(--error);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 24px;
+    }
+
+    .alert-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--error);
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .alert-content {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    /* Section */
+    .panel-section {
+      margin-bottom: 24px;
+    }
+
+    .panel-section-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+      padding-bottom: 8px;
+      margin-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* Waterfall */
+    .waterfall-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+    }
+
+    .waterfall-row:last-child {
+      border-bottom: none;
+    }
+
+    .waterfall-label {
+      width: 140px;
+      flex-shrink: 0;
+      color: var(--text-secondary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 11px;
+    }
+
+    .waterfall-track {
+      flex: 1;
+      height: 16px;
+      background: var(--bg-tertiary);
+      border-radius: 2px;
+      position: relative;
+      border: 1px solid var(--border);
+    }
+
+    .waterfall-bar {
+      position: absolute;
+      height: 100%;
+      border-radius: 2px;
+      background: var(--accent);
+      top: 0;
+    }
+
+    .waterfall-bar.warning {
+      background: var(--warning);
+    }
+
+    .waterfall-bar.critical {
+      background: var(--critical);
+    }
+
+    .waterfall-duration {
+      width: 50px;
+      flex-shrink: 0;
+      text-align: right;
+      color: var(--text-tertiary);
+      font-size: 11px;
+    }
+
+    /* Span tree */
+    .span-item {
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+    }
+
+    .span-item:last-child {
+      border-bottom: none;
+    }
+
+    .span-indent {
+      flex-shrink: 0;
+    }
+
+    .span-connector {
+      color: var(--border);
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .span-name {
+      flex: 1;
+      color: var(--text-secondary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .span-name.critical {
+      color: var(--warning);
+    }
+
+    .span-name.bottleneck {
+      color: var(--critical);
+    }
+
+    .span-badges {
+      display: flex;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .span-badge {
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 9px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .span-badge.critical {
+      background: rgba(255, 165, 0, 0.2);
+      color: var(--warning);
+    }
+
+    .span-badge.bottleneck {
+      background: rgba(239, 83, 80, 0.2);
+      color: var(--critical);
+    }
+
+    .span-timing {
+      display: flex;
+      gap: 12px;
+      flex-shrink: 0;
+      font-size: 10px;
+      color: var(--text-tertiary);
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg-primary);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--border-light);
+    }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <a class="logo">
+    <div class="logo-icon">◎</div>
+    <div class="logo-text">
+      <div class="logo-title">Lumen</div>
+      <div class="logo-subtitle">Distributed Tracer</div>
+    </div>
+  </a>
+  <div class="header-search">
+    <input class="search-input" type="text" placeholder="Search traces by ID..." id="global-search">
+  </div>
+  <div class="header-info">
+    <div class="info-item">
+      <span>Ingested:</span>
+      <span class="info-value" id="metric-ingested">—</span>
+    </div>
+    <div class="info-item">
+      <span>Queue:</span>
+      <span class="info-value" id="metric-queue">—</span>
+    </div>
+  </div>
+  <div class="theme-toggle" id="theme-toggle">
+    <button class="theme-btn active" id="dark-btn" onclick="setTheme('dark')" title="Dark theme">🌙</button>
+    <button class="theme-btn" id="light-btn" onclick="setTheme('light')" title="Light theme">☀️</button>
+  </div>
+</div>
+
+<!-- Main layout -->
+<div class="container">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <label class="sidebar-label">Services</label>
+      <div class="sidebar-items" id="services-list">
+        <div class="empty-state">
+          <div class="spinner"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main content -->
+  <div class="main">
+    <div id="traces-view">
+      <div class="empty-state">
+        <div class="empty-icon">📊</div>
+        <div class="empty-text">Select a service to view traces</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Detail panel -->
+<div class="detail-panel" id="detail-panel">
+  <div class="panel-header">
+    <div class="panel-title">
+      <div class="panel-trace-id" id="panel-trace-id">—</div>
+      <div>
+        <span id="panel-duration" class="panel-duration">—</span><span class="panel-duration-unit">ms</span>
+      </div>
+    </div>
+    <button class="close-btn" onclick="closePanel()">✕</button>
+  </div>
+  <div class="panel-body" id="panel-body"></div>
+</div>
+
+<script>
+const API = 'http://localhost:8080';
+let currentService = null;
+let currentTimeRange = 3600000;
+let allTraces = [];
+
+// Theme management
+function initTheme() {
+  const saved = localStorage.getItem('lumen-theme') || 'dark';
+  setTheme(saved);
+}
+
+function setTheme(theme) {
+  const isDark = theme === 'dark';
+  document.body.classList.toggle('light-theme', !isDark);
+  document.getElementById('dark-btn').classList.toggle('active', isDark);
+  document.getElementById('light-btn').classList.toggle('active', !isDark);
+  localStorage.setItem('lumen-theme', theme);
+}
+
+async function init() {
+  initTheme();
+  loadMetrics();
+  loadServices();
+  setInterval(loadMetrics, 10000);
+}
+
+async function loadMetrics() {
+  try {
+    const r = await fetch(`${API}/api/metrics`);
+    const m = await r.json();
+    document.getElementById('metric-ingested').textContent = (m.spans_ingested_total ?? 0).toLocaleString();
+    document.getElementById('metric-queue').textContent = (m.queue_depth ?? 0).toLocaleString();
+  } catch {
+    document.getElementById('metric-ingested').textContent = '—';
+    document.getElementById('metric-queue').textContent = '—';
+  }
+}
+
+async function loadServices() {
+  try {
+    const r = await fetch(`${API}/api/services`);
+    const services = await r.json();
+    const el = document.getElementById('services-list');
+    if (!services.length) {
+      el.innerHTML = '<div class="empty-state" style="padding:20px;font-size:12px">No services</div>';
+      return;
+    }
+    el.innerHTML = services.map(s => `
+      <div class="service-item" onclick="selectService('${s}')" id="svc-${s}">
+        <div class="service-status"></div><span>${s}</span>
+      </div>
+    `).join('');
+  } catch {
+    document.getElementById('services-list').innerHTML = '<div class="empty-state" style="padding:20px;font-size:12px">Failed to load</div>';
+  }
+}
+
+function selectService(name) {
+  currentService = name;
+  document.querySelectorAll('.service-item').forEach(el => el.classList.remove('active'));
+  const el = document.getElementById(`svc-${name}`);
+  if (el) el.classList.add('active');
+  loadTraces();
+}
+
+async function loadTraces() {
+  if (!currentService) return;
+  const to = Date.now();
+  const from = to - currentTimeRange;
+
+  document.getElementById('traces-view').innerHTML = `
+    <div class="toolbar">
+      <label class="toolbar-label">Time Range</label>
+      <div class="time-buttons">
+        ${[[900000,'15m'],[3600000,'1h'],[10800000,'3h'],[86400000,'24h']]
+          .map(([ms,l]) => `<button class="time-btn ${currentTimeRange===ms?'active':''}" onclick="setTimeRange(${ms})">${l}</button>`)
+          .join('')}
+      </div>
+      <div class="toolbar-spacer"></div>
+    </div>
+    <div class="section-title">
+      <div class="spinner"></div>
+      Loading...
+    </div>
+  `;
+
+  try {
+    const r = await fetch(`${API}/api/traces?service=${encodeURIComponent(currentService)}&from=${from}&to=${to}`);
+    allTraces = await r.json();
+    renderTraces(allTraces);
+  } catch {
+    document.getElementById('traces-view').innerHTML = '<div class="empty-state"><div class="empty-text">Failed to load traces</div></div>';
+  }
+}
+
+function setTimeRange(ms) {
+  currentTimeRange = ms;
+  loadTraces();
+}
+
+function renderTraces(traces) {
+  if (!traces.length) {
+    document.getElementById('traces-view').innerHTML = `
+      <div class="toolbar">
+        <label class="toolbar-label">Time Range</label>
+        <div class="time-buttons">
+          ${[[900000,'15m'],[3600000,'1h'],[10800000,'3h'],[86400000,'24h']]
+            .map(([ms,l]) => `<button class="time-btn ${currentTimeRange===ms?'active':''}" onclick="setTimeRange(${ms})">${l}</button>`)
+            .join('')}
+        </div>
+      </div>
+      <div class="empty-state">
+        <div class="empty-icon">✨</div>
+        <div class="empty-text">No traces in this time range</div>
+      </div>
+    `;
+    return;
+  }
+
+  const maxDur = Math.max(...traces.map(t => t.durationMs));
+
+  document.getElementById('traces-view').innerHTML = `
+    <div class="toolbar">
+      <label class="toolbar-label">Time Range</label>
+      <div class="time-buttons">
+        ${[[900000,'15m'],[3600000,'1h'],[10800000,'3h'],[86400000,'24h']]
+          .map(([ms,l]) => `<button class="time-btn ${currentTimeRange===ms?'active':''}" onclick="setTimeRange(${ms})">${l}</button>`)
+          .join('')}
+      </div>
+      <div class="toolbar-spacer"></div>
+    </div>
+    <div class="section-title">
+      <span class="trace-count">${traces.length}</span> trace${traces.length!==1?'s':''}
+    </div>
+    <table class="trace-table">
+      <thead>
+        <tr>
+          <th style="width:140px">Trace ID</th>
+          <th style="width:180px">Service</th>
+          <th style="width:120px">Operation</th>
+          <th style="width:140px">Duration</th>
+          <th style="width:80px">Status</th>
+          <th style="width:100px">Time</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${traces.map(t => {
+          const barPct = Math.max(4, Math.round((t.durationMs / maxDur) * 80));
+          let barClass = '';
+          if (t.durationMs > 1000) barClass = 'critical';
+          else if (t.durationMs > 500) barClass = 'warning';
+          const time = new Date(t.startTimeMs).toLocaleTimeString();
+          return `
+            <tr onclick="openTrace('${t.traceId}')">
+              <td class="trace-id">${t.traceId.substring(0,12)}…</td>
+              <td>${currentService}</td>
+              <td>${t.rootOperation || '—'}</td>
+              <td>
+                <div class="duration-cell">
+                  <div class="duration-bar ${barClass}" style="width:${barPct}px"></div>
+                  <span>${t.durationMs}ms</span>
+                </div>
+              </td>
+              <td>
+                <span class="status-badge ${t.hasError ? 'status-error' : 'status-ok'}">
+                  ${t.hasError ? '● ERROR' : '● OK'}
+                </span>
+              </td>
+              <td>${time}</td>
+            </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+async function openTrace(traceId) {
+  document.getElementById('panel-trace-id').textContent = traceId;
+  document.getElementById('panel-duration').textContent = '…';
+  document.getElementById('panel-body').innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
+  document.getElementById('detail-panel').classList.add('open');
+
+  try {
+    const r = await fetch(`${API}/api/traces/${traceId}`);
+    const trace = await r.json();
+    renderTraceDetail(trace);
+  } catch {
+    document.getElementById('panel-body').innerHTML = '<div class="empty-state"><div class="empty-text">Failed to load</div></div>';
+  }
+}
+
+function closePanel() {
+  document.getElementById('detail-panel').classList.remove('open');
+}
+
+function renderTraceDetail(trace) {
+  document.getElementById('panel-trace-id').textContent = `Trace ${trace.traceId.substring(0,16)}…`;
+  document.getElementById('panel-duration').textContent = trace.totalDurationMs;
+
+  const criticalSet = new Set(trace.criticalPathSpanIds || []);
+  const bottleneck = trace.bottleneckSpanId;
+  const botPct = trace.totalDurationMs > 0
+    ? Math.round((trace.bottleneckSelfTimeMs / trace.totalDurationMs) * 100)
+    : 0;
+
+  const flatSpans = [];
+  function flatten(node, depth) {
+    flatSpans.push({ node, depth });
+    (node.childrens || []).forEach(c => flatten(c, depth + 1));
+  }
+  if (trace.root) flatten(trace.root, 0);
+
+  const traceStart = trace.root?.span?.startTimeByNano || 0;
+  const traceDur = (trace.totalDurationMs * 1_000_000) || 1;
+
+  document.getElementById('panel-body').innerHTML = `
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Total Duration</div>
+        <div class="stat-value">${trace.totalDurationMs}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Span Count</div>
+        <div class="stat-value accent">${flatSpans.length}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Critical Path</div>
+        <div class="stat-value accent">${(trace.criticalPathSpanIds||[]).length}</div>
+      </div>
+    </div>
+
+    ${bottleneck ? (() => {
+      const node = findNode(trace.root, bottleneck);
+      return node ? `
+        <div class="alert">
+          <div class="alert-title">⚡ Bottleneck Detected</div>
+          <div class="alert-content">
+            <strong>${node.span.operationName}</strong> took ${trace.bottleneckSelfTimeMs}ms
+            (${botPct}% of total trace)
+          </div>
+        </div>
+      ` : '';
+    })() : ''}
+
+    <!-- Waterfall -->
+    <div class="panel-section">
+      <div class="panel-section-title">Span Waterfall</div>
+      ${flatSpans.map(({ node, depth }) => {
+        const s = node.span;
+        const start = s.startTimeByNano - traceStart;
+        const dur = s.durationMs * 1_000_000;
+        const left = Math.round((start / traceDur) * 100);
+        const width = Math.max(1, Math.round((dur / traceDur) * 100));
+        const isCrit = criticalSet.has(s.spanId);
+        const isBot = s.spanId === bottleneck;
+        let barClass = '';
+        if (isBot) barClass = 'critical';
+        else if (isCrit) barClass = 'warning';
+        return `
+          <div class="waterfall-row">
+            <div class="waterfall-label">${isBot ? '🔴 ' : isCrit ? '⚡ ' : ''}${s.operationName}</div>
+            <div class="waterfall-track">
+              <div class="waterfall-bar ${barClass}" style="left:${left}%;width:${width}%"></div>
+            </div>
+            <div class="waterfall-duration">${s.durationMs}ms</div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+
+    <!-- Span tree -->
+    <div class="panel-section">
+      <div class="panel-section-title">Span Hierarchy</div>
+      ${flatSpans.map(({ node, depth }) => {
+        const s = node.span;
+        const isCrit = criticalSet.has(s.spanId);
+        const isBot = s.spanId === bottleneck;
+        return `
+          <div class="span-item">
+            <div class="span-indent" style="width:${depth*12}px"></div>
+            ${depth > 0 ? '<span class="span-connector">└</span>' : ''}
+            <div class="span-name ${isBot ? 'bottleneck' : isCrit ? 'critical' : ''}">${s.operationName}</div>
+            <div class="span-badges">
+              ${isBot ? '<span class="span-badge bottleneck">Bottleneck</span>' : ''}
+              ${isCrit && !isBot ? '<span class="span-badge critical">Critical</span>' : ''}
+            </div>
+            <div class="span-timing">
+              <span>self: ${node.selfTimeMs}ms</span>
+              <span>total: ${s.durationMs}ms</span>
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+function findNode(node, spanId) {
+  if (!node) return null;
+  if (node.span.spanId === spanId) return node;
+  for (const c of (node.childrens || [])) {
+    const found = findNode(c, spanId);
+    if (found) return found;
+  }
+  return null;
+}
+
+document.addEventListener('click', e => {
+  const panel = document.getElementById('detail-panel');
+  if (panel.classList.contains('open') &&
+      !panel.contains(e.target) &&
+      !e.target.closest('.trace-table')) {
+    closePanel();
+  }
+});
+
+init();
+</script>
+</body>
+</html>
