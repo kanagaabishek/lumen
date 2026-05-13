@@ -36,6 +36,19 @@ never leaves your infrastructure.
 
 ![FLOW DIAGRAM](<./docs/images/Flow-diagram.png>)
 
+## UI
+
+![Lumen Trace Explorer](docs/images/ui-trace-detail.png)
+
+A built-in trace explorer is available at `http://localhost:8080` 
+after starting with `docker-compose up`. No separate deployment needed.
+
+- Browse traces by service
+- Filter by time range (15m, 1h, 3h, 24h)
+- Waterfall diagram with critical path highlighted in amber
+- Bottleneck span highlighted in red with percentage of total duration
+- Gap detection showing idle time between operations
+
 ## How to Run
 
 ### Prerequisites
@@ -72,18 +85,6 @@ otel.exporter.otlp.endpoint=http://localhost:9090
 Any OpenTelemetry-compatible SDK works — point the OTLP exporter 
 at `http://your-lumen-host:9090`.
 
-## UI
-
-![Lumen Trace Explorer](docs/images/ui-trace-detail.png)
-
-A built-in trace explorer is available at `http://localhost:8080` 
-after starting with `docker-compose up`. No separate deployment needed.
-
-- Browse traces by service
-- Filter by time range (15m, 1h, 3h, 24h)
-- Waterfall diagram with critical path highlighted in amber
-- Bottleneck span highlighted in red with percentage of total duration
-- Gap detection showing idle time between operations
 
 
 ## Engineering Decisions
