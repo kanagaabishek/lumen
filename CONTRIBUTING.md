@@ -27,6 +27,25 @@ Contributions are welcome! Here's how to get started developing Lumen.
    - REST API: http://localhost:8080
    - gRPC: http://localhost:9090
 
+4. **Verify both servers started**
+
+   Look for these two lines in the logs:
+   ```
+   Schema initialized successfully
+   gRPC server started on port: 9090
+   Tomcat started on port(s): 8080
+   ```
+
+5. **Send a test trace**
+
+   ```bash
+   cd examples/node-client
+   npm install --legacy-peer-deps
+   node app.js
+   ```
+
+   Then open `http://localhost:8080` — your service should appear in the sidebar.
+
 ### Running Tests
 
 **Unit tests** (no Cassandra required):
@@ -49,34 +68,37 @@ mvn clean package
 
 ```
 src/main/java/com/lumen/server/
-├── domain/          — Core data models (no framework dependencies)
-│   ├── Span         — Raw trace span from OpenTelemetry
-│   ├── SpanNode     — Tree node wrapping a Span with children
-│   └── TraceBuildResult — Result of reconstructing a trace tree
+├── config/          — Spring configuration
+│   └── CassandraConfig    — Cassandra session + schema initialization on startup
 │
-├── analysis/        — Trace analysis algorithms
-│   ├── TraceReconstructionService — Build span trees from flat list
-│   └── LatencyAnalysisService     — Compute self-time and critical path
+├── ingestion/       — gRPC handler and async queue
+│   ├── TraceServiceImpl     — gRPC service endpoint (extends TraceServiceGrpc)
+│   ├── SpanBatchWriter      — Background batch writer (SmartLifecycle)
+│   ├── SpanIngestionQueue   — Thread-safe bounded queue (LinkedBlockingQueue)
+│   └── GrpcServer           — gRPC server lifecycle (SmartLifecycle)
+│
+├── api/             — REST controllers
+│   ├── TraceQueryController — Trace query endpoints
+│   └── MetricsController    — Health and metrics endpoints
+│
+├── service/         — Business logic orchestration
+│   └── TraceQueryService  — Orchestrates repository + analysis pipeline
 │
 ├── storage/         — Cassandra repository layer
 │   ├── SpanRepository             — Interface for span storage
 │   └── CassandraSpanRepository    — Cassandra implementation
 │
-├── ingestion/       — gRPC handler and async queue
-│   ├── TraceServiceImpl     — gRPC service endpoint
-│   ├── SpanBatchWriter     — Batch writer for Cassandra
-│   ├── SpanIngestionQueue  — Thread-safe ingestion queue
-│   └── SchemaInitializer   — Creates Cassandra keyspace/tables
+├── analysis/        — Trace analysis algorithms
+│   ├── TraceReconstructionService — Build span trees from flat list
+│   └── LatencyAnalysisService     — Compute self-time and critical path
 │
-├── api/             — REST controllers
-│   └── TraceQueryController — HTTP endpoints for querying traces
-│
-├── service/         — Business logic orchestration
-│   └── TraceQueryService   — Orchestrates analysis and storage
-│
-└── config/          — Spring configuration
-    ├── CassandraConfig    — Cassandra session setup
-    └── GrpcServerConfig   — gRPC server configuration
+└── domain/          — Core data models (no framework dependencies)
+    ├── Span               — Raw span from OpenTelemetry wire format
+    ├── SpanNode           — Tree node wrapping Span with children list
+    ├── TraceBuildResult   — Root SpanNode + nodeMap from buildTree()
+    ├── Gap                — Detected idle time between consecutive spans
+    ├── TraceSummary       — Lightweight trace metadata for listing
+    └── TraceResponse      — Full analysis result returned by API
 ```
 
 ### Code Style & Guidelines
@@ -102,10 +124,11 @@ src/main/java/com/lumen/server/
 - Finds gaps (idle time between operations)
 
 **SpanIngestionQueue** (`ingestion/`)
-- Thread-safe queue for span ingestion
-- gRPC threads call `offer()` (non-blocking, may drop)
-- Background thread drains batches every 100ms
+- Bounded LinkedBlockingQueue with capacity 10,000
+- `offer()` is non-blocking — returns false immediately if full
 - Dropped spans increment a counter visible at `/api/metrics`
+- `drainTo()` pulls up to 500 spans atomically for batch writing
+- Never blocks gRPC threads — decouples ingestion from write throughput
 
 ### Making a Pull Request
 

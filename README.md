@@ -32,9 +32,9 @@ never leaves your infrastructure.
 
 
 # Architecture
-![Architecture Diagram](<Architecture-diagram.png>)
+![Architecture Diagram](</docs/images/Architecture-diagram.png>)
 
-![FLOW DIAGRAM](<Flow-diagram.png>)
+![FLOW DIAGRAM](<./docs/images/Flow-diagram.png>)
 
 ## How to Run
 
@@ -60,6 +60,31 @@ exporter = OTLPSpanExporter(endpoint="http://localhost:9090", insecure=True)
 // Java — application.properties
 otel.exporter.otlp.endpoint=http://localhost:9090
 ```
+
+## Integrations
+
+| Language | Guide |
+|----------|-------|
+| Java / Spring Boot | [docs/integration/java.md](docs/integrations/java.md) |
+| Node.js | [docs/integration/node.md](docs/integrations/node.md) |
+| Python | [docs/integration/python.md](docs/integrations/python.md) |
+
+Any OpenTelemetry-compatible SDK works — point the OTLP exporter 
+at `http://your-lumen-host:9090`.
+
+## UI
+
+![Lumen Trace Explorer](docs/images/ui-trace-detail.png)
+
+A built-in trace explorer is available at `http://localhost:8080` 
+after starting with `docker-compose up`. No separate deployment needed.
+
+- Browse traces by service
+- Filter by time range (15m, 1h, 3h, 24h)
+- Waterfall diagram with critical path highlighted in amber
+- Bottleneck span highlighted in red with percentage of total duration
+- Gap detection showing idle time between operations
+
 
 ## Engineering Decisions
 
@@ -98,13 +123,20 @@ LinkedBlockingQueue decouples ingestion from writes. gRPC threads call `offer()`
 When the queue is full, spans are dropped and a counter increments. This counter is visible at `/api/metrics`. The system stays responsive under load; operators see the dropped count and scale accordingly.
 
 ### Why interval union for self time
+Services make parallel downstream calls. Naive self-time calculation 
+sums child durations — which double-counts overlapping time and 
+produces negative results:
+
 parent [10ms → 70ms] = 60ms duration
 child-A [10ms → 50ms] = 40ms
 child-B [30ms → 70ms] = 40ms
 
-Services make parallel downstream calls. Naive self-time calculation 
-sums child durations — which double-counts overlapping time and 
-produces negative results
+Naive sum:     60 - (40+40) = -20ms — impossible
+Interval union: merge [10,50] and [30,70] = [10,70] = 60ms covered
+Self time:     60 - 60 = 0ms — parent was entirely waiting on children
+
+Interval union correctly computes the actual covered time regardless 
+of how many children overlap.
 
 ### Why BATCH writes
 You write to two tables — spans and trace_index. What happens if the first write succeeds and the second fails due to a Cassandra node hiccup?
@@ -128,7 +160,9 @@ BATCH solves this problem by writing both atomically — either both commit or n
 
 **Distributed ingestion** — Replace the in-memory queue with Kafka. Multiple Lumen instances consume from the same topic, enabling horizontal scaling of the write path.
 
-**Web UI** — A trace viewer showing the span tree visually as a waterfall diagram, with critical path highlighted and bottleneck annotated.
+**Service dependency graph** — Build a graph showing which services 
+call which other services, with edge weights showing call frequency 
+and average latency between them.
 
 **Alert rules** — Notify when p99 latency for a service exceeds a threshold for N consecutive minutes.
 
